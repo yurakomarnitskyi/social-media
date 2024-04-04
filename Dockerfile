@@ -1,14 +1,9 @@
 FROM python:latest
 
-ENV PYTHONUNBUFFERED=1
+WORKDIR /root/my_app/
 
-WORKDIR /application 
+COPY ./requirements.txt .
 
-COPY ./apps /application/
+RUN pip install -r requirements.txt
 
-RUN pip install -r requirements
-
-
-
-
-
+COPY ./apps ./apps
