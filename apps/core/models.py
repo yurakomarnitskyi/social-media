@@ -7,6 +7,10 @@ from django.contrib.auth.models import (
     PermissionsMixin,
     BaseUserManager,
 )
+from django.db.models.signals import post_save
+from django.dispatch import receiver
+from django.conf import settings
+from django.contrib.auth import get_user_model
 
 
 class UserAccountManager(BaseUserManager):
@@ -45,4 +49,42 @@ class UserAccount(AbstractBaseUser, PermissionsMixin):
 
     def __str__(self):
         return self.email
+    
+    def save(self, *args, **kwargs):
+        super().save(*args, **kwargs)
+        Profile.objects.get_or_create(user=self)
 
+
+class Profile(models.Model):
+    """Model for user profile."""
+    user = models.OneToOneField(settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE)
+    profile_photo = models.ImageField(upload_to='profile', null=True, blank=True)
+    address = models.CharField(max_length=255, blank=True)
+    hobby = models.CharField(max_length=255, blank=True)
+    description = models.TextField(blank=True)
+
+
+class Posts(models.Model):
+    """Model for user posts."""
+    user = models.OneToOneField(settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE)
+    text = models.TextField(blank=True)
+    photo = models.ImageField(upload_to='posts', null=True, blank=True)
+    video = models.FileField(upload_to='posts', null=True, blank=True)
+
+
+# @receiver(post_save, sender=Posts)
+# def update_profile(sender, instance, created, **kwrgs):
+#     """Signals for updaing profile."""
+#     if created:
+#         profile = Profile.objects.get_or_create(user=instance.user)[0]
+#         profile.posts.add(instance)
+
+
+
+@receiver(post_save, sender=UserAccount)
+def save_user_profile(sender, instance, created, **kwargs):
+    if created:
+        Profile.objects.create(user=instance)
+    instance.profile.save()
